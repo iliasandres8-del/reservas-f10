@@ -1,0 +1,147 @@
+<!doctype html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+  <meta name="theme-color" content="#1E3A8A" />
+  <title>Reservas · Club F10</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Atkinson+Hyperlegible:wght@400;700&display=swap" rel="stylesheet" />
+  <link rel="stylesheet" href="estilos.css" />
+</head>
+<body>
+  <!-- Pantalla de entrada -->
+  <section id="pantalla-login" class="login" hidden>
+    <div class="login-caja">
+      <div class="marca"><span class="marca-logo">F10</span><div><strong>Reservas</strong><small>Club Deportivo F10</small></div></div>
+      <form id="form-login">
+        <label>Correo<input type="email" id="login-correo" autocomplete="email" required /></label>
+        <label>Contraseña<input type="password" id="login-clave" autocomplete="current-password" minlength="6" required /></label>
+        <p class="error" id="login-error" role="alert"></p>
+        <button type="submit" class="btn btn-principal" id="btn-entrar">Entrar</button>
+        <button type="button" class="btn btn-texto" id="btn-crear-cuenta">Es mi primera vez: crear mi cuenta</button>
+      </form>
+    </div>
+  </section>
+
+  <!-- App -->
+  <div id="app" hidden>
+    <header class="barra">
+      <div class="marca"><span class="marca-logo">F10</span><div><strong>Reservas</strong><small>Club Deportivo F10</small></div></div>
+      <div class="barra-acciones">
+        <button class="btn-icono" id="btn-ajustes" aria-label="Ajustes de precios y horario">
+          <svg viewBox="0 0 24 24"><path d="M12.22 2h-.44a2 2 0 0 0-2 2v.18a2 2 0 0 1-1 1.73l-.43.25a2 2 0 0 1-2 0l-.15-.08a2 2 0 0 0-2.73.73l-.22.38a2 2 0 0 0 .73 2.73l.15.1a2 2 0 0 1 1 1.72v.51a2 2 0 0 1-1 1.74l-.15.09a2 2 0 0 0-.73 2.73l.22.38a2 2 0 0 0 2.73.73l.15-.08a2 2 0 0 1 2 0l.43.25a2 2 0 0 1 1 1.73V20a2 2 0 0 0 2 2h.44a2 2 0 0 0 2-2v-.18a2 2 0 0 1 1-1.73l.43-.25a2 2 0 0 1 2 0l.15.08a2 2 0 0 0 2.73-.73l.22-.39a2 2 0 0 0-.73-2.73l-.15-.08a2 2 0 0 1-1-1.74v-.5a2 2 0 0 1 1-1.74l.15-.09a2 2 0 0 0 .73-2.73l-.22-.38a2 2 0 0 0-2.73-.73l-.15.08a2 2 0 0 1-2 0l-.43-.25a2 2 0 0 1-1-1.73V4a2 2 0 0 0-2-2z"/><circle cx="12" cy="12" r="3"/></svg>
+        </button>
+        <button class="btn-icono" id="btn-salir" aria-label="Cerrar sesión">
+          <svg viewBox="0 0 24 24"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/><polyline points="16 17 21 12 16 7"/><line x1="21" y1="12" x2="9" y2="12"/></svg>
+        </button>
+      </div>
+    </header>
+
+    <main>
+      <nav class="fecha" aria-label="Cambiar de día">
+        <button class="btn-icono" id="dia-anterior" aria-label="Día anterior"><svg viewBox="0 0 24 24"><polyline points="15 18 9 12 15 6"/></svg></button>
+        <label class="fecha-centro">
+          <span id="fecha-texto">Hoy</span>
+          <small id="fecha-tipo"></small>
+          <input type="date" id="fecha-input" aria-label="Escoger fecha" />
+        </label>
+        <button class="btn-icono" id="dia-siguiente" aria-label="Día siguiente"><svg viewBox="0 0 24 24"><polyline points="9 18 15 12 9 6"/></svg></button>
+        <button class="btn btn-suave" id="btn-hoy">Hoy</button>
+      </nav>
+
+      <section class="resumen" aria-label="Resumen del día">
+        <div class="dato"><small>Reservas</small><strong id="r-reservas">0</strong></div>
+        <div class="dato"><small>Horas ocupadas</small><strong id="r-horas">0</strong></div>
+        <div class="dato dato-bien"><small>Cobrado</small><strong id="r-cobrado">$0</strong></div>
+        <div class="dato dato-ojo"><small>Por cobrar</small><strong id="r-pendiente">$0</strong></div>
+      </section>
+
+      <section class="tablero-caja" aria-label="Canchas por hora">
+        <div class="tablero" id="tablero"></div>
+      </section>
+
+      <section class="lista-caja">
+        <h2>Reservas del día</h2>
+        <ul class="lista" id="lista"></ul>
+      </section>
+    </main>
+
+    <button class="fab" id="btn-nueva" aria-label="Nueva reserva">
+      <svg viewBox="0 0 24 24"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
+      <span>Nueva reserva</span>
+    </button>
+  </div>
+
+  <!-- Formulario de reserva -->
+  <dialog id="dlg-reserva" class="hoja">
+    <form id="form-reserva" method="dialog">
+      <header class="hoja-cabeza">
+        <h2 id="reserva-titulo">Nueva reserva</h2>
+        <button type="button" class="btn-icono" data-cerrar aria-label="Cerrar"><svg viewBox="0 0 24 24"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg></button>
+      </header>
+      <div class="campos">
+        <label class="ancho">Cliente<input id="f-cliente" required autocomplete="off" placeholder="Nombre de quien reserva" /></label>
+        <label class="ancho">Teléfono<input id="f-telefono" type="tel" inputmode="tel" autocomplete="off" placeholder="300 123 4567" /></label>
+        <label>Fecha<input id="f-fecha" type="date" required /></label>
+        <label>Cancha
+          <select id="f-cancha" required>
+            <option value="1">Cancha 1</option><option value="2">Cancha 2</option><option value="3">Cancha 3</option><option value="4">Cancha 4</option>
+          </select>
+        </label>
+        <label>Hora<select id="f-hora" required></select></label>
+        <label>Duración
+          <select id="f-duracion">
+            <option value="1">1 hora</option><option value="1.5">1 hora y media</option><option value="2">2 horas</option><option value="3">3 horas</option>
+          </select>
+        </label>
+        <label>Valor<input id="f-valor" type="number" inputmode="numeric" min="0" step="1000" required /></label>
+        <label>Abono<input id="f-abono" type="number" inputmode="numeric" min="0" step="1000" value="0" /></label>
+        <label class="ancho">Estado
+          <select id="f-estado">
+            <option value="pendiente">Pendiente (sin pago)</option>
+            <option value="abonada">Abonada</option>
+            <option value="pagada">Pagada completa</option>
+            <option value="cancelada">Cancelada</option>
+          </select>
+        </label>
+        <label class="ancho">Notas<textarea id="f-notas" rows="2" placeholder="Ej: equipo de la oficina, traen balón"></textarea></label>
+      </div>
+      <p class="aviso" id="f-aviso" role="alert"></p>
+      <footer class="hoja-pie">
+        <button type="button" class="btn btn-peligro" id="btn-eliminar" hidden>Eliminar</button>
+        <a class="btn btn-suave" id="btn-whatsapp" target="_blank" rel="noopener" hidden>WhatsApp</a>
+        <button type="submit" class="btn btn-principal" id="btn-guardar">Guardar</button>
+      </footer>
+    </form>
+  </dialog>
+
+  <!-- Ajustes -->
+  <dialog id="dlg-ajustes" class="hoja">
+    <form id="form-ajustes" method="dialog">
+      <header class="hoja-cabeza">
+        <h2>Precios y horario</h2>
+        <button type="button" class="btn-icono" data-cerrar aria-label="Cerrar"><svg viewBox="0 0 24 24"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg></button>
+      </header>
+      <div class="campos">
+        <label>Abre a las<select id="a-abre"></select></label>
+        <label>Cierra a las<select id="a-cierra"></select></label>
+        <p class="ancho seccion">Lunes a jueves</p>
+        <label>Tarde (hasta las 6 p. m.)<input id="a-semana-tarde" type="number" step="1000" min="0" /></label>
+        <label>Noche (desde las 6 p. m.)<input id="a-semana-noche" type="number" step="1000" min="0" /></label>
+        <p class="ancho seccion">Viernes, sábado, domingo y festivos</p>
+        <label>Tarde (hasta las 6 p. m.)<input id="a-finde-tarde" type="number" step="1000" min="0" /></label>
+        <label>Noche (desde las 6 p. m.)<input id="a-finde-noche" type="number" step="1000" min="0" /></label>
+      </div>
+      <footer class="hoja-pie">
+        <button type="submit" class="btn btn-principal">Guardar ajustes</button>
+      </footer>
+    </form>
+  </dialog>
+
+  <div class="toast" id="toast" role="status" aria-live="polite"></div>
+
+  <script type="module" src="app.js"></script>
+</body>
+</html>
