@@ -20,5 +20,19 @@ service cloud.firestore {
     match /ajustes/{id} {
       allow read, write: if esAndres();
     }
+
+    // App "Suma de pagos": la cuenta interna de la app (entra con el PIN) y Andrés
+    function esSuma() {
+      return request.auth != null && request.auth.token.email in ['pagos@club-f10.app', 'iliasandres8@gmail.com'];
+    }
+    function pagoValido(d) {
+      return d.valor is number && d.valor >= 0 && d.valor <= 100000000
+        && d.fecha is string && d.fecha.matches('^[0-9]{4}-[0-9]{2}-[0-9]{2}$')
+        && (!('mini' in d) || (d.mini is string && d.mini.size() < 60000));
+    }
+    match /pagos/{id} {
+      allow read, delete: if esSuma();
+      allow create, update: if esSuma() && pagoValido(request.resource.data);
+    }
   }
 }
