@@ -147,3 +147,20 @@ textarea { resize: vertical; }
 @media (prefers-reduced-motion: reduce) {
   * { transition: none !important; }
 }
+
+/* Cierre del día (inventario) */
+.cierre { margin-top: 26px; }
+.cierre-cabeza { display: flex; justify-content: space-between; align-items: center; gap: 10px; margin-bottom: 10px; }
+.cierre-cabeza h2 { font-size: 18px; margin: 0; }
+.cierre-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 10px; }
+.cierre-caja { background: var(--tarjeta); border-radius: var(--radio); box-shadow: var(--sombra); padding: 12px 14px; }
+.cierre-caja h3 { font-size: 15px; margin: 0 0 6px; color: var(--primario); }
+.tabla { width: 100%; border-collapse: collapse; font-size: 14px; font-variant-numeric: tabular-nums; }
+.tabla td { padding: 7px 0; border-top: 1px solid var(--apagado); vertical-align: top; }
+.tabla tr:first-child td { border-top: 0; }
+.tabla td:nth-child(2) { text-align: center; font-weight: 700; padding: 7px 8px; white-space: nowrap; }
+.tabla td:last-child { text-align: right; white-space: nowrap; }
+.tabla small { display: block; color: var(--texto-suave); font-size: 12px; }
+.tabla tr.total td { border-top: 2px solid var(--borde); font-weight: 700; }
+.tabla .vacio { text-align: center !important; color: var(--texto-suave); font-weight: 400 !important; }
+@media (max-width: 800px) { .cierre-grid { grid-template-columns: 1fr; } }

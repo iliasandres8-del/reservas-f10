@@ -76,6 +76,30 @@
         <h2>Reservas del día</h2>
         <ul class="lista" id="lista"></ul>
       </section>
+
+      <section class="cierre" aria-labelledby="cierre-titulo">
+        <div class="cierre-cabeza">
+          <h2 id="cierre-titulo">Cierre del día</h2>
+          <button class="btn btn-suave" id="btn-compartir-cierre">
+            <svg viewBox="0 0 24 24"><circle cx="18" cy="5" r="3"/><circle cx="6" cy="12" r="3"/><circle cx="18" cy="19" r="3"/><line x1="8.6" y1="13.5" x2="15.4" y2="17.5"/><line x1="15.4" y1="6.5" x2="8.6" y2="10.5"/></svg>
+            <span>Compartir</span>
+          </button>
+        </div>
+        <div class="cierre-grid">
+          <div class="cierre-caja">
+            <h3>Canchas por precio</h3>
+            <table class="tabla" id="c-precios"></table>
+          </div>
+          <div class="cierre-caja">
+            <h3>Cómo pagaron</h3>
+            <table class="tabla" id="c-estados"></table>
+          </div>
+          <div class="cierre-caja">
+            <h3>Por cancha</h3>
+            <table class="tabla" id="c-canchas"></table>
+          </div>
+        </div>
+      </section>
     </main>
 
     <button class="fab" id="btn-nueva" aria-label="Nueva reserva">

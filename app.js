@@ -189,7 +189,76 @@ function pintar() {
   $("r-esperado").textContent = `de ${plata(esperado)} del día`;
   pintarTablero(act);
   pintarLista();
+  pintarCierre();
 }
+
+// ---------- Cierre del día (inventario) ----------
+const numero = (n) => n.toLocaleString("es-CO", { maximumFractionDigits: 1 });
+const canchasTexto = (n) => `${numero(n)} ${n === 1 ? "cancha" : "canchas"}`;
+function datosCierre() {
+  const act = activas(), fecha = estado.fecha;
+  // Cada hora jugada es una cancha; se agrupa por el precio de esa hora (si el valor se cambió a mano, se usa el valor real)
+  const precios = new Map();
+  const sumarPrecio = (p, horas, plata) => { const g = precios.get(p) || { horas: 0, plata: 0 }; g.horas += horas; g.plata += plata; precios.set(p, g); };
+  for (const r of act) {
+    if (calcularValor(fecha, r.inicio, r.duracion) === r.valor) {
+      for (let t = r.inicio; t < r.inicio + r.duracion - 1e-9; t += 0.5) { const p = precioHora(fecha, t); sumarPrecio(p, 0.5, p / 2); }
+    } else sumarPrecio(Math.round(r.valor / r.duracion / 1000) * 1000, r.duracion, r.valor);
+  }
+  const grupo = (lista) => ({ n: lista.length, valor: lista.reduce((s, r) => s + r.valor, 0), abono: lista.reduce((s, r) => s + Math.min(r.abono || 0, r.valor), 0) });
+  const pagadas = grupo(act.filter((r) => r.estado === "pagada"));
+  const abonadas = grupo(act.filter((r) => r.estado !== "pagada" && (r.abono || 0) > 0));
+  const sinPago = grupo(act.filter((r) => r.estado !== "pagada" && !(r.abono > 0)));
+  const canceladas = estado.reservas.filter((r) => r.estado === "cancelada").length;
+  const canchas = CANCHAS.map((c) => { const l = act.filter((r) => r.cancha === c); return { c, n: l.length, horas: l.reduce((s, r) => s + r.duracion, 0), valor: l.reduce((s, r) => s + r.valor, 0) }; });
+  const total = act.reduce((s, r) => s + r.valor, 0), recibido = pagadas.valor + abonadas.abono;
+  return { precios: [...precios].sort((a, b) => a[0] - b[0]), pagadas, abonadas, sinPago, canceladas, canchas, total, recibido, porCobrar: total - recibido, horas: act.reduce((s, r) => s + r.duracion, 0) };
+}
+function fila(tabla, a, b, c, clase) {
+  const tr = tabla.insertRow(); if (clase) tr.className = clase;
+  for (const v of [a, b, c]) { const td = tr.insertCell(); if (Array.isArray(v)) { td.textContent = v[0]; const s = document.createElement("small"); s.textContent = v[1]; td.appendChild(s); } else td.textContent = v; }
+}
+function pintarCierre() {
+  const d = datosCierre();
+  const tp = $("c-precios"); tp.innerHTML = "";
+  if (!d.precios.length) { const td = tp.insertRow().insertCell(); td.colSpan = 3; td.className = "vacio"; td.textContent = "Todavía no hay canchas este día"; }
+  for (const [p, g] of d.precios) fila(tp, `De ${plata(p)}`, canchasTexto(g.horas), plata(g.plata));
+  if (d.precios.length) fila(tp, "Total", canchasTexto(d.horas), plata(d.total), "total");
+
+  const te = $("c-estados"); te.innerHTML = "";
+  fila(te, "Pagadas completas", d.pagadas.n, plata(d.pagadas.valor));
+  fila(te, ["Abonaron", d.abonadas.n ? `Les falta ${plata(d.abonadas.valor - d.abonadas.abono)}` : ""], d.abonadas.n, plata(d.abonadas.abono));
+  fila(te, "Sin pagar", d.sinPago.n, plata(d.sinPago.valor));
+  if (d.canceladas) fila(te, "Canceladas", d.canceladas, "—");
+  fila(te, "Recibido", "", plata(d.recibido), "total");
+  fila(te, "Por cobrar", "", plata(d.porCobrar));
+
+  const tc = $("c-canchas"); tc.innerHTML = "";
+  for (const c of d.canchas) fila(tc, `Cancha ${c.c}`, [`${c.n} ${c.n === 1 ? "reserva" : "reservas"}`, `${numero(c.horas)} h`], plata(c.valor));
+}
+$("btn-compartir-cierre").addEventListener("click", async () => {
+  const d = datosCierre();
+  const nombre = aFecha(estado.fecha).toLocaleDateString("es-CO", { weekday: "long", day: "numeric", month: "long" });
+  const texto = [
+    `Cierre Club F10 · ${nombre}`,
+    "",
+    "Canchas por precio:",
+    ...(d.precios.length ? d.precios.map(([p, g]) => `• De ${plata(p)}: ${canchasTexto(g.horas)} = ${plata(g.plata)}`) : ["• Ninguna"]),
+    `Total: ${canchasTexto(d.horas)} = ${plata(d.total)}`,
+    "",
+    `Pagadas completas: ${d.pagadas.n} = ${plata(d.pagadas.valor)}`,
+    `Abonaron: ${d.abonadas.n} = ${plata(d.abonadas.abono)}` + (d.abonadas.n ? ` (les falta ${plata(d.abonadas.valor - d.abonadas.abono)})` : ""),
+    `Sin pagar: ${d.sinPago.n} = ${plata(d.sinPago.valor)}`,
+    ...(d.canceladas ? [`Canceladas: ${d.canceladas}`] : []),
+    "",
+    `Recibido: ${plata(d.recibido)}`,
+    `Por cobrar: ${plata(d.porCobrar)}`,
+    "",
+    ...d.canchas.map((c) => `Cancha ${c.c}: ${c.n} (${numero(c.horas)} h) = ${plata(c.valor)}`),
+  ].join("\n");
+  if (navigator.share) { try { await navigator.share({ text: texto }); return; } catch { /* cancelado */ } }
+  window.open("https://wa.me/?text=" + encodeURIComponent(texto), "_blank");
+});
 
 function pintarTablero(act) {
   const t = $("tablero"), { abre, cierra } = estado.ajustes;
