@@ -14,7 +14,7 @@ const auth = getAuth(app);
 const db = getFirestore(app);
 
 const CANCHAS = [1, 2, 3, 4];
-const AJUSTES_BASE = { abre: 15, cierra: 23, semanaTarde: 60000, semanaNoche: 80000, findeTarde: 70000, findeNoche: 90000 };
+const AJUSTES_BASE = { abre: 15, cierra: 23, semanaTarde: 60000, semanaNoche: 80000, viernes: 100000, finde: 90000 };
 const ALTO_HORA = 64;
 
 const $ = (id) => document.getElementById(id);
@@ -65,14 +65,17 @@ const esFestivo = (iso) => festivos(aFecha(iso).getFullYear()).has(iso);
 function tipoDia(iso) {
   const dow = aFecha(iso).getDay();
   if (esFestivo(iso)) return "festivo";
-  return dow === 5 || dow === 6 || dow === 0 ? "finde" : "semana";
+  if (dow === 5) return "viernes";
+  return dow === 6 || dow === 0 ? "finde" : "semana";
 }
 
 // ---------- Precios ----------
+// Lunes a jueves: tarde y noche. Viernes: un solo precio. Sábado, domingo y festivos: un solo precio.
 function precioHora(iso, h) {
-  const a = estado.ajustes, finde = tipoDia(iso) !== "semana";
-  const tarde = h < 18;
-  return finde ? (tarde ? a.findeTarde : a.findeNoche) : (tarde ? a.semanaTarde : a.semanaNoche);
+  const a = estado.ajustes, tipo = tipoDia(iso);
+  if (tipo === "viernes") return a.viernes;
+  if (tipo !== "semana") return a.finde;
+  return h < 18 ? a.semanaTarde : a.semanaNoche;
 }
 function calcularValor(iso, inicio, dur) {
   let total = 0;
@@ -126,7 +129,7 @@ $("btn-ajustes").addEventListener("click", () => {
   opcionesHoras($("a-abre"), 6, 20, 1, a.abre);
   opcionesHoras($("a-cierra"), 12, 24, 1, a.cierra);
   $("a-semana-tarde").value = a.semanaTarde; $("a-semana-noche").value = a.semanaNoche;
-  $("a-finde-tarde").value = a.findeTarde; $("a-finde-noche").value = a.findeNoche;
+  $("a-viernes").value = a.viernes; $("a-finde").value = a.finde;
   $("dlg-ajustes").showModal();
 });
 $("form-ajustes").addEventListener("submit", async (e) => {
@@ -134,7 +137,7 @@ $("form-ajustes").addEventListener("submit", async (e) => {
   const nuevos = {
     abre: Number($("a-abre").value), cierra: Number($("a-cierra").value),
     semanaTarde: Number($("a-semana-tarde").value), semanaNoche: Number($("a-semana-noche").value),
-    findeTarde: Number($("a-finde-tarde").value), findeNoche: Number($("a-finde-noche").value),
+    viernes: Number($("a-viernes").value), finde: Number($("a-finde").value),
   };
   if (nuevos.cierra <= nuevos.abre) { toast("La hora de cierre debe ser después de la de apertura."); return; }
   try {
@@ -152,7 +155,8 @@ function irA(iso) {
   const nombre = f.toLocaleDateString("es-CO", { weekday: "long", day: "numeric", month: "long" });
   $("fecha-texto").textContent = iso === hoy ? "Hoy, " + nombre : iso === sumarDias(hoy, 1) ? "Mañana, " + nombre : nombre;
   const tipo = tipoDia(iso);
-  $("fecha-tipo").textContent = tipo === "festivo" ? "Festivo · tarifa fin de semana" : tipo === "finde" ? "Tarifa fin de semana" : "Tarifa entre semana";
+  const a = estado.ajustes;
+  $("fecha-tipo").textContent = tipo === "festivo" ? `Festivo · ${plata(a.finde)} la hora` : tipo === "finde" ? `Fin de semana · ${plata(a.finde)} la hora` : tipo === "viernes" ? `Viernes · ${plata(a.viernes)} la hora` : `Entre semana · ${plata(a.semanaTarde)} tarde / ${plata(a.semanaNoche)} noche`;
   if (estado.cancelarEscucha) estado.cancelarEscucha();
   estado.reservas = []; pintar();
   estado.cancelarEscucha = onSnapshot(query(collection(db, "reservas"), where("fecha", "==", iso)), (snap) => {
