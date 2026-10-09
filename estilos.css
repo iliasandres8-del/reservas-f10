@@ -30,7 +30,7 @@ svg { width: 22px; height: 22px; fill: none; stroke: currentColor; stroke-width:
 
 /* Marca */
 .marca { display: flex; align-items: center; gap: 10px; }
-.marca-logo { display: grid; place-items: center; width: 40px; height: 40px; border-radius: 10px; background: var(--primario); color: #fff; font-weight: 700; letter-spacing: .02em; }
+.marca-logo { display: block; width: 40px; height: 40px; border-radius: 10px; object-fit: cover; background: #0B1430; }
 .marca strong { display: block; font-size: 18px; }
 .marca small { color: var(--texto-suave); font-size: 13px; }
 
@@ -71,7 +71,11 @@ main { max-width: 1100px; margin: 0 auto; padding: 14px 16px 110px; }
 .dato small { display: block; color: var(--texto-suave); font-size: 13px; }
 .dato strong { font-size: 20px; font-variant-numeric: tabular-nums; }
 .dato-bien strong { color: var(--bien); }
-.dato-ojo strong { color: var(--ojo); }
+.dato-ojo strong { color: var(--peligro); }
+.dato-abono strong { color: var(--ojo); }
+.dato em { display: block; font-style: normal; font-size: 12px; color: var(--texto-suave); margin-top: 2px; }
+.btn-instalar { min-height: 44px; padding: 0 14px; }
+.btn-instalar svg { width: 20px; height: 20px; }
 
 /* Tablero */
 .tablero-caja { background: var(--tarjeta); border-radius: var(--radio); box-shadow: var(--sombra); overflow-x: auto; }
@@ -134,6 +138,8 @@ textarea { resize: vertical; }
 @media (max-width: 640px) {
   .resumen { grid-template-columns: repeat(2, 1fr); }
   .fab span { display: none; }
+  .btn-instalar span { display: none; }
+  .btn-instalar { width: 44px; padding: 0; }
   .fab { width: 58px; height: 58px; padding: 0; justify-content: center; }
   dialog.hoja { margin: auto auto 0; border-radius: 16px 16px 0 0; width: 100%; max-width: 100%; }
   .campos { grid-template-columns: 1fr 1fr; }

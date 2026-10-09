@@ -5,6 +5,12 @@
   <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
   <meta name="theme-color" content="#1E3A8A" />
   <title>Reservas · Club F10</title>
+  <link rel="manifest" href="manifest.json" />
+  <link rel="icon" type="image/png" sizes="32x32" href="iconos/favicon-32.png" />
+  <link rel="icon" type="image/png" sizes="64x64" href="iconos/favicon-64.png" />
+  <link rel="apple-touch-icon" href="iconos/icono-180.png" />
+  <meta name="mobile-web-app-capable" content="yes" />
+  <meta name="apple-mobile-web-app-title" content="Reservas F10" />
   <link rel="preconnect" href="https://fonts.googleapis.com" />
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
   <link href="https://fonts.googleapis.com/css2?family=Atkinson+Hyperlegible:wght@400;700&display=swap" rel="stylesheet" />
@@ -14,7 +20,7 @@
   <!-- Pantalla de entrada -->
   <section id="pantalla-login" class="login" hidden>
     <div class="login-caja">
-      <div class="marca"><span class="marca-logo">F10</span><div><strong>Reservas</strong><small>Club Deportivo F10</small></div></div>
+      <div class="marca"><img class="marca-logo" src="iconos/icono-192.png" alt="Escudo Club Deportivo F10" width="40" height="40" /><div><strong>Reservas</strong><small>Club Deportivo F10</small></div></div>
       <form id="form-login">
         <label>Correo<input type="email" id="login-correo" autocomplete="email" required /></label>
         <label>Contraseña<input type="password" id="login-clave" autocomplete="current-password" minlength="6" required /></label>
@@ -28,8 +34,12 @@
   <!-- App -->
   <div id="app" hidden>
     <header class="barra">
-      <div class="marca"><span class="marca-logo">F10</span><div><strong>Reservas</strong><small>Club Deportivo F10</small></div></div>
+      <div class="marca"><img class="marca-logo" src="iconos/icono-192.png" alt="Escudo Club Deportivo F10" width="40" height="40" /><div><strong>Reservas</strong><small>Club Deportivo F10</small></div></div>
       <div class="barra-acciones">
+        <button class="btn btn-principal btn-instalar" id="btn-instalar" hidden>
+          <svg viewBox="0 0 24 24"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
+          <span>Instalar app</span>
+        </button>
         <button class="btn-icono" id="btn-ajustes" aria-label="Ajustes de precios y horario">
           <svg viewBox="0 0 24 24"><path d="M12.22 2h-.44a2 2 0 0 0-2 2v.18a2 2 0 0 1-1 1.73l-.43.25a2 2 0 0 1-2 0l-.15-.08a2 2 0 0 0-2.73.73l-.22.38a2 2 0 0 0 .73 2.73l.15.1a2 2 0 0 1 1 1.72v.51a2 2 0 0 1-1 1.74l-.15.09a2 2 0 0 0-.73 2.73l.22.38a2 2 0 0 0 2.73.73l.15-.08a2 2 0 0 1 2 0l.43.25a2 2 0 0 1 1 1.73V20a2 2 0 0 0 2 2h.44a2 2 0 0 0 2-2v-.18a2 2 0 0 1 1-1.73l.43-.25a2 2 0 0 1 2 0l.15.08a2 2 0 0 0 2.73-.73l.22-.39a2 2 0 0 0-.73-2.73l-.15-.08a2 2 0 0 1-1-1.74v-.5a2 2 0 0 1 1-1.74l.15-.09a2 2 0 0 0 .73-2.73l-.22-.38a2 2 0 0 0-2.73-.73l-.15.08a2 2 0 0 1-2 0l-.43-.25a2 2 0 0 1-1-1.73V4a2 2 0 0 0-2-2z"/><circle cx="12" cy="12" r="3"/></svg>
         </button>
@@ -52,10 +62,10 @@
       </nav>
 
       <section class="resumen" aria-label="Resumen del día">
-        <div class="dato"><small>Reservas</small><strong id="r-reservas">0</strong></div>
-        <div class="dato"><small>Horas ocupadas</small><strong id="r-horas">0</strong></div>
-        <div class="dato dato-bien"><small>Cobrado</small><strong id="r-cobrado">$0</strong></div>
-        <div class="dato dato-ojo"><small>Por cobrar</small><strong id="r-pendiente">$0</strong></div>
+        <div class="dato"><small>Reservas</small><strong id="r-reservas">0</strong><em id="r-horas">0 horas</em></div>
+        <div class="dato dato-bien"><small>Total pagado</small><strong id="r-pagado">$0</strong><em id="r-pagadas">0 pagadas completas</em></div>
+        <div class="dato dato-abono"><small>Abonos</small><strong id="r-abonos">$0</strong><em id="r-abonadas">0 reservas abonadas</em></div>
+        <div class="dato dato-ojo"><small>Por cobrar</small><strong id="r-pendiente">$0</strong><em id="r-esperado">de $0 del día</em></div>
       </section>
 
       <section class="tablero-caja" aria-label="Canchas por hora">

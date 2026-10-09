@@ -170,10 +170,19 @@ const cobrado = (r) => (r.estado === "pagada" ? r.valor : Math.min(r.abono || 0,
 
 function pintar() {
   const act = activas();
+  // Las pagadas completas suman al total; los abonos van aparte hasta que esa reserva quede pagada
+  const pagadas = act.filter((r) => r.estado === "pagada");
+  const conAbono = act.filter((r) => r.estado !== "pagada" && (r.abono || 0) > 0);
+  const horas = act.reduce((s, r) => s + r.duracion, 0);
+  const esperado = act.reduce((s, r) => s + r.valor, 0);
   $("r-reservas").textContent = act.length;
-  $("r-horas").textContent = act.reduce((s, r) => s + r.duracion, 0).toLocaleString("es-CO");
-  $("r-cobrado").textContent = plata(act.reduce((s, r) => s + cobrado(r), 0));
+  $("r-horas").textContent = `${horas.toLocaleString("es-CO")} ${horas === 1 ? "hora" : "horas"}`;
+  $("r-pagado").textContent = plata(pagadas.reduce((s, r) => s + r.valor, 0));
+  $("r-pagadas").textContent = `${pagadas.length} ${pagadas.length === 1 ? "pagada completa" : "pagadas completas"}`;
+  $("r-abonos").textContent = plata(conAbono.reduce((s, r) => s + Math.min(r.abono, r.valor), 0));
+  $("r-abonadas").textContent = `${conAbono.length} ${conAbono.length === 1 ? "reserva abonada" : "reservas abonadas"}`;
   $("r-pendiente").textContent = plata(act.reduce((s, r) => s + (r.valor - cobrado(r)), 0));
+  $("r-esperado").textContent = `de ${plata(esperado)} del día`;
   pintarTablero(act);
   pintarLista();
 }
@@ -327,3 +336,21 @@ $("btn-eliminar").addEventListener("click", async () => {
 });
 $("btn-nueva").addEventListener("click", () => abrirReserva(null));
 document.querySelectorAll("[data-cerrar]").forEach((b) => b.addEventListener("click", () => b.closest("dialog").close()));
+
+// ---------- Instalar como app (Android) ----------
+let avisoInstalar = null;
+window.addEventListener("beforeinstallprompt", (e) => {
+  e.preventDefault();
+  avisoInstalar = e;
+  $("btn-instalar").hidden = false;
+});
+$("btn-instalar").addEventListener("click", async () => {
+  if (!avisoInstalar) return;
+  avisoInstalar.prompt();
+  const { outcome } = await avisoInstalar.userChoice;
+  avisoInstalar = null;
+  $("btn-instalar").hidden = true;
+  if (outcome === "accepted") toast("¡Listo! Ya tienes Reservas F10 en tu pantalla de inicio");
+});
+window.addEventListener("appinstalled", () => { $("btn-instalar").hidden = true; });
+if ("serviceWorker" in navigator) navigator.serviceWorker.register("sw.js").catch((e) => console.error(e));
