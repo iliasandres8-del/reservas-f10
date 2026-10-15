@@ -35,10 +35,23 @@ function horaTexto(h) {
   const h12 = ((hh + 11) % 12) + 1;
   return `${h12}${mm ? ":" + String(mm).padStart(2, "0") : ""} ${sufijo}`;
 }
-function toast(msg) {
-  const t = $("toast"); t.textContent = msg; t.classList.add("ver");
-  clearTimeout(toast.t); toast.t = setTimeout(() => t.classList.remove("ver"), 2600);
+// Aviso flotante. tipo: "ok" (salió bien), "mal" (error) o nada (informativo)
+function toast(msg, tipo = "") {
+  const t = $("toast");
+  $("toast-texto").textContent = msg;
+  t.querySelector(".toast-ok").toggleAttribute("hidden", tipo !== "ok"); // en un <svg> no existe .hidden
+  t.querySelector(".toast-mal").toggleAttribute("hidden", tipo !== "mal");
+  t.className = "toast ver " + tipo;
+  clearTimeout(toast.t); toast.t = setTimeout(() => t.classList.remove("ver"), tipo === "mal" ? 4000 : 2400);
 }
+// Pone un botón en modo "trabajando" mientras se guarda algo
+function ocupado(btn, si, texto) {
+  if (si) { btn.dataset.texto = btn.textContent; btn.textContent = texto; }
+  else if (btn.dataset.texto) { btn.textContent = btn.dataset.texto; delete btn.dataset.texto; }
+  btn.disabled = si;
+  if (si) btn.setAttribute("aria-busy", "true"); else btn.removeAttribute("aria-busy");
+}
+const mayuscula = (s) => s.charAt(0).toUpperCase() + s.slice(1);
 
 // ---------- Festivos de Colombia (Ley Emiliani) ----------
 const cacheFestivos = {};
@@ -101,10 +114,13 @@ async function entrar(crear) {
   const correo = $("login-correo").value.trim(), clave = $("login-clave").value;
   $("login-error").textContent = "";
   if (!correo || clave.length < 6) { $("login-error").textContent = "Escribe tu correo y una contraseña de al menos 6 caracteres."; return; }
+  const btn = crear ? $("btn-crear-cuenta") : $("btn-entrar");
+  ocupado(btn, true, crear ? "Creando cuenta…" : "Entrando…");
   try {
     if (crear) await createUserWithEmailAndPassword(auth, correo, clave);
     else await signInWithEmailAndPassword(auth, correo, clave);
   } catch (e) { $("login-error").textContent = erroresAuth[e.code] || "No se pudo entrar (" + e.code + ")."; }
+  finally { ocupado(btn, false); }
 }
 $("form-login").addEventListener("submit", (e) => { e.preventDefault(); entrar(false); });
 $("btn-crear-cuenta").addEventListener("click", () => entrar(true));
@@ -115,7 +131,7 @@ async function cargarAjustes() {
   try {
     const s = await getDoc(doc(db, "ajustes", "general"));
     estado.ajustes = { ...AJUSTES_BASE, ...(s.exists() ? s.data() : {}) };
-  } catch (e) { console.error(e); toast("No pude leer los ajustes; uso los de siempre."); }
+  } catch (e) { console.error(e); toast("No pude leer los ajustes; uso los de siempre.", "mal"); }
 }
 function opcionesHoras(select, desde, hasta, paso, valor) {
   select.innerHTML = "";
@@ -139,11 +155,14 @@ $("form-ajustes").addEventListener("submit", async (e) => {
     semanaTarde: Number($("a-semana-tarde").value), semanaNoche: Number($("a-semana-noche").value),
     viernes: Number($("a-viernes").value), finde: Number($("a-finde").value),
   };
-  if (nuevos.cierra <= nuevos.abre) { toast("La hora de cierre debe ser después de la de apertura."); return; }
+  if (nuevos.cierra <= nuevos.abre) { toast("La hora de cierre debe ser después de la de apertura.", "mal"); return; }
+  const btn = e.submitter || $("form-ajustes").querySelector("[type=submit]");
+  ocupado(btn, true, "Guardando…");
   try {
     await setDoc(doc(db, "ajustes", "general"), nuevos);
-    estado.ajustes = nuevos; $("dlg-ajustes").close(); pintar(); toast("Ajustes guardados");
-  } catch (err) { console.error(err); toast("No se pudieron guardar los ajustes."); }
+    estado.ajustes = nuevos; $("dlg-ajustes").close(); pintar(); toast("Ajustes guardados", "ok");
+  } catch (err) { console.error(err); toast("No se pudieron guardar los ajustes. Revisa la conexión.", "mal"); }
+  finally { ocupado(btn, false); }
 });
 
 // ---------- Día ----------
@@ -153,16 +172,22 @@ function irA(iso) {
   const f = aFecha(iso);
   const hoy = hoyISO();
   const nombre = f.toLocaleDateString("es-CO", { weekday: "long", day: "numeric", month: "long" });
-  $("fecha-texto").textContent = iso === hoy ? "Hoy, " + nombre : iso === sumarDias(hoy, 1) ? "Mañana, " + nombre : nombre;
+  $("fecha-texto").textContent = iso === hoy ? "Hoy, " + nombre : iso === sumarDias(hoy, 1) ? "Mañana, " + nombre : mayuscula(nombre);
+  $("btn-hoy").hidden = iso === hoy;
   const tipo = tipoDia(iso);
   const a = estado.ajustes;
   $("fecha-tipo").textContent = tipo === "festivo" ? `Festivo · ${plata(a.finde)} la hora` : tipo === "finde" ? `Fin de semana · ${plata(a.finde)} la hora` : tipo === "viernes" ? `Viernes · ${plata(a.viernes)} la hora` : `Entre semana · ${plata(a.semanaTarde)} tarde / ${plata(a.semanaNoche)} noche`;
   if (estado.cancelarEscucha) estado.cancelarEscucha();
-  estado.reservas = []; pintar();
+  estado.reservas = []; estado.cargando = true; estado.error = false; pintar();
   estado.cancelarEscucha = onSnapshot(query(collection(db, "reservas"), where("fecha", "==", iso)), (snap) => {
     estado.reservas = snap.docs.map((d) => ({ id: d.id, ...d.data() })).sort((a, b) => a.inicio - b.inicio || a.cancha - b.cancha);
+    estado.cargando = false; estado.error = false;
     pintar();
-  }, (err) => { console.error(err); toast("No tengo permiso para leer las reservas. ¿Entraste con tu correo?"); });
+  }, (err) => {
+    console.error(err);
+    estado.cargando = false; estado.error = true; pintar();
+    toast("No pude leer las reservas. ¿Entraste con tu correo?", "mal");
+  });
 }
 $("dia-anterior").addEventListener("click", () => irA(sumarDias(estado.fecha, -1)));
 $("dia-siguiente").addEventListener("click", () => irA(sumarDias(estado.fecha, 1)));
@@ -187,6 +212,8 @@ function pintar() {
   $("r-abonadas").textContent = `${conAbono.length} ${conAbono.length === 1 ? "reserva abonada" : "reservas abonadas"}`;
   $("r-pendiente").textContent = plata(act.reduce((s, r) => s + (r.valor - cobrado(r)), 0));
   $("r-esperado").textContent = `de ${plata(esperado)} del día`;
+  if (estado.cargando) $("contenido").setAttribute("aria-busy", "true"); else $("contenido").removeAttribute("aria-busy");
+  $("contenido").toggleAttribute("data-error", !!estado.error);
   pintarTablero(act);
   pintarLista();
   pintarCierre();
@@ -284,7 +311,10 @@ function pintarTablero(act) {
         b.style.height = r.duracion * ALTO_HORA - 8 + "px";
         b.innerHTML = `<b></b><span></span>`;
         b.querySelector("b").textContent = r.cliente;
-        b.querySelector("span").textContent = `${horaTexto(r.inicio)} · ${etiquetaEstado(r)}`;
+        // En la casilla va corto (la hora ya se ve en la fila); la versión completa queda para lectores de pantalla
+        const corto = { pendiente: "Sin pago", abonada: "Abonó", pagada: "Pagada" }[r.estado] || etiquetaEstado(r);
+        b.querySelector("span").textContent = (r.inicio % 1 ? horaTexto(r.inicio) + " · " : "") + corto;
+        b.setAttribute("aria-label", `${r.cliente}, cancha ${c}, ${horaTexto(r.inicio)}, ${etiquetaEstado(r)}`);
         b.addEventListener("click", () => abrirReserva(r));
         celda.appendChild(b);
       }
@@ -297,17 +327,28 @@ function etiquetaEstado(r) {
 }
 function pintarLista() {
   const ul = $("lista"); ul.innerHTML = "";
-  if (!estado.reservas.length) { ul.innerHTML = '<li class="vacio">No hay reservas este día. Toca una casilla libre o el botón naranja.</li>'; return; }
+  if (estado.cargando) {
+    ul.innerHTML = '<li class="esqueleto" aria-hidden="true"></li><li class="esqueleto" aria-hidden="true"></li><li class="sr-solo">Cargando reservas…</li>';
+    return;
+  }
+  if (estado.error) {
+    ul.innerHTML = '<li class="lista-estado mal"><strong>No pude cargar las reservas</strong><span>Revisa la conexión. Si sigue igual, sal y vuelve a entrar.</span><button type="button" class="btn btn-suave" id="btn-reintentar">Reintentar</button></li>';
+    $("btn-reintentar").addEventListener("click", () => irA(estado.fecha));
+    return;
+  }
+  if (!estado.reservas.length) { ul.innerHTML = '<li class="lista-estado"><strong>Nada reservado este día</strong><span>Toca una casilla libre del tablero o el botón naranja.</span></li>'; return; }
   for (const r of estado.reservas) {
     const li = document.createElement("li");
-    if (r.estado === "cancelada") li.classList.add("cancelada");
-    li.innerHTML = `<span class="l-hora"></span><span class="l-quien"><b></b><small></small></span><span class="l-valor"><b></b><br><span class="chip"></span></span>`;
-    li.querySelector(".l-hora").textContent = horaTexto(r.inicio);
-    li.querySelector(".l-quien b").textContent = r.cliente;
-    li.querySelector(".l-quien small").textContent = `Cancha ${r.cancha} · ${r.duracion} h${r.telefono ? " · " + r.telefono : ""}`;
-    li.querySelector(".l-valor b").textContent = plata(r.valor);
-    const chip = li.querySelector(".chip"); chip.className = "chip e-" + r.estado; chip.textContent = etiquetaEstado(r);
-    li.addEventListener("click", () => abrirReserva(r));
+    const b = document.createElement("button");
+    b.type = "button"; b.className = "l-item" + (r.estado === "cancelada" ? " cancelada" : "");
+    b.innerHTML = `<span class="l-hora"></span><span class="l-quien"><b></b><small></small></span><span class="l-valor"><b></b><span class="chip"></span></span>`;
+    b.querySelector(".l-hora").textContent = horaTexto(r.inicio);
+    b.querySelector(".l-quien b").textContent = r.cliente;
+    b.querySelector(".l-quien small").textContent = `Cancha ${r.cancha} · ${numero(r.duracion)} h${r.telefono ? " · " + r.telefono : ""}`;
+    b.querySelector(".l-valor b").textContent = plata(r.valor);
+    const chip = b.querySelector(".chip"); chip.className = "chip e-" + r.estado; chip.textContent = etiquetaEstado(r);
+    b.addEventListener("click", () => abrirReserva(r));
+    li.appendChild(b);
     ul.appendChild(li);
   }
 }
@@ -387,25 +428,28 @@ $("form-reserva").addEventListener("submit", async (e) => {
   };
   if (!datos.cliente) { $("f-aviso").textContent = "Escribe el nombre de quien reserva."; return; }
   if (datos.inicio + datos.duracion > estado.ajustes.cierra) { $("f-aviso").textContent = `La reserva pasa de la hora de cierre (${horaTexto(estado.ajustes.cierra)}).`; return; }
-  if (datos.estado !== "cancelada") {
-    const otra = await choca(datos, estado.editando?.id);
-    if (otra) { $("f-aviso").textContent = `La cancha ${datos.cancha} ya está reservada por ${otra.cliente} de ${horaTexto(otra.inicio)} a ${horaTexto(otra.inicio + otra.duracion)}.`; return; }
-  }
-  $("btn-guardar").disabled = true;
+  ocupado($("btn-guardar"), true, "Guardando…");
+  $("f-aviso").textContent = "";
   try {
+    if (datos.estado !== "cancelada") {
+      const otra = await choca(datos, estado.editando?.id);
+      if (otra) { $("f-aviso").textContent = `La cancha ${datos.cancha} ya está reservada por ${otra.cliente} de ${horaTexto(otra.inicio)} a ${horaTexto(otra.inicio + otra.duracion)}`; return; }
+    }
     if (estado.editando) await updateDoc(doc(db, "reservas", estado.editando.id), { ...datos, actualizada: serverTimestamp() });
     else await addDoc(collection(db, "reservas"), { ...datos, creada: serverTimestamp() });
     $("dlg-reserva").close();
-    toast(estado.editando ? "Reserva actualizada" : "Reserva guardada");
+    toast(estado.editando ? `Reserva de ${datos.cliente} actualizada` : `Reserva de ${datos.cliente} guardada`, "ok");
     if (datos.fecha !== estado.fecha) irA(datos.fecha);
-  } catch (err) { console.error(err); $("f-aviso").textContent = "No se pudo guardar. Revisa tu conexión."; }
-  finally { $("btn-guardar").disabled = false; }
+  } catch (err) { console.error(err); $("f-aviso").textContent = "No se pudo guardar. Revisa tu conexión e inténtalo otra vez."; }
+  finally { ocupado($("btn-guardar"), false); }
 });
 $("btn-eliminar").addEventListener("click", async () => {
   const r = estado.editando;
   if (!r || !confirm(`¿Eliminar la reserva de ${r.cliente}? Si solo no vino, mejor márcala como Cancelada.`)) return;
-  try { await deleteDoc(doc(db, "reservas", r.id)); $("dlg-reserva").close(); toast("Reserva eliminada"); }
-  catch (err) { console.error(err); toast("No se pudo eliminar."); }
+  ocupado($("btn-eliminar"), true, "Eliminando…");
+  try { await deleteDoc(doc(db, "reservas", r.id)); $("dlg-reserva").close(); toast("Reserva eliminada", "ok"); }
+  catch (err) { console.error(err); toast("No se pudo eliminar. Revisa la conexión.", "mal"); }
+  finally { ocupado($("btn-eliminar"), false); }
 });
 $("btn-nueva").addEventListener("click", () => abrirReserva(null));
 document.querySelectorAll("[data-cerrar]").forEach((b) => b.addEventListener("click", () => b.closest("dialog").close()));
@@ -423,7 +467,7 @@ $("btn-instalar").addEventListener("click", async () => {
   const { outcome } = await avisoInstalar.userChoice;
   avisoInstalar = null;
   $("btn-instalar").hidden = true;
-  if (outcome === "accepted") toast("¡Listo! Ya tienes Reservas F10 en tu pantalla de inicio");
+  if (outcome === "accepted") toast("¡Listo! Ya tienes Reservas F10 en tu pantalla de inicio", "ok");
 });
 window.addEventListener("appinstalled", () => { $("btn-instalar").hidden = true; });
 if ("serviceWorker" in navigator) navigator.serviceWorker.register("sw.js").catch((e) => console.error(e));
